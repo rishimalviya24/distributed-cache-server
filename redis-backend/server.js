@@ -16,7 +16,7 @@ class CacheServer {
     this.server = http.createServer(this.app);
     this.io = socketIo(this.server, {
       cors: {
-        origin: process.env.FRONTEND_URL || "http://localhost:3000",
+        origin:"https://redis-backend-comz.onrender.com",
         methods: ["GET", "POST", "DELETE", "PUT"]
       }
     });
