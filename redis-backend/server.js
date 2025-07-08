@@ -1,5 +1,3 @@
-// server.js
-
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
@@ -23,11 +21,9 @@ class CacheServer {
       }
     });
 
-    // Initialize cache with LRU strategy
     this.currentStrategy = 'LRU';
     this.cache = new LRUCache(parseInt(process.env.CACHE_CAPACITY) || 100);
 
-    // Parse peer nodes from env
     const peerNodes = process.env.PEER_NODES
       ? process.env.PEER_NODES.split(',').map(url => url.trim())
       : [];
@@ -35,7 +31,6 @@ class CacheServer {
     console.log("🔗 [SyncManager] Attempting peer connections:", peerNodes);
     console.log("🌐 Self node URL:", `http://localhost:${process.env.PORT}`);
 
-    // Initialize sync manager with parsed peers
     this.syncManager = new SyncManager(this.cache, this.io, peerNodes);
 
     this.setupMiddleware();
@@ -109,13 +104,19 @@ class CacheServer {
   async getCacheItem(req, res) {
     try {
       const { key } = req.params;
-      const value = this.cache.get(key);
+      const item = this.cache.get(key);
 
-      if (value !== null) {
-        res.json({ success: true, key, value, timestamp: Date.now() });
+      if (item) {
+        item.timestamp = new Date().toISOString();
+        item.accessCount = (item.accessCount || 0) + 1;
+
+        this.cache.set(key, item);
+
+        res.json({ success: true, key, value: item });
       } else {
         res.status(404).json({ success: false, message: 'Key not found', key });
       }
+
       this.broadcastMetrics();
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
@@ -124,13 +125,18 @@ class CacheServer {
 
   async setCacheItem(req, res) {
     try {
-      const { key, value, ttl } = req.body;
+      const { key, value } = req.body;
       if (!key || value === undefined) {
         return res.status(400).json({ success: false, message: 'Key and value are required' });
       }
 
-      this.cache.set(key, value);
-      this.syncManager.broadcastOperation({ type: 'set', key, value, ttl });
+      this.cache.set(key, {
+        value,
+        timestamp: new Date().toISOString(),
+        accessCount: 1
+      });
+
+      this.syncManager.broadcastOperation({ type: 'set', key, value });
 
       res.json({ success: true, message: 'Item cached successfully', key, value });
       this.broadcastCacheUpdate();
@@ -271,7 +277,11 @@ class CacheServer {
       items.forEach((item, index) => {
         try {
           if (item.key && item.value !== undefined) {
-            this.cache.set(item.key, item.value);
+            this.cache.set(item.key, {
+              value: item.value,
+              timestamp: new Date().toISOString(),
+              accessCount: 1
+            });
             successCount++;
             this.syncManager.broadcastOperation({ type: 'set', key: item.key, value: item.value });
           } else {
