@@ -14,7 +14,7 @@ class SyncManager {
     this.syncHistory = [];
     this.connectedPeers = new Map(); // client connections (as a client)
     this.connectedNodes = new Map(); // server connections (as a server)
-    this.peers = peerNodes; // Array of peer URLs like http://localhost:5001
+    this.peers = peerNodes;
 
     console.log("🔗 [SyncManager] Attempting peer connections:", peerNodes);
 
@@ -33,6 +33,7 @@ class SyncManager {
           lastSync: Date.now()
         });
 
+        // Reply with full sync
         socket.emit('cache-sync', {
           type: 'full-sync',
           data: this.cache.getAll(),
@@ -47,12 +48,6 @@ class SyncManager {
         this.handleRemoteOperation(operation, socket.id);
       });
 
-      socket.on('disconnect', () => {
-        this.connectedNodes.delete(socket.id);
-        console.log(`🔴 Node disconnected (server): ${socket.id}`);
-        this.broadcastNodeList();
-      });
-
       socket.on('request-sync', () => {
         socket.emit('cache-sync', {
           type: 'full-sync',
@@ -61,12 +56,17 @@ class SyncManager {
           timestamp: Date.now()
         });
       });
+
+      socket.on('disconnect', () => {
+        this.connectedNodes.delete(socket.id);
+        console.log(`🔴 Node disconnected (server): ${socket.id}`);
+        this.broadcastNodeList();
+      });
     });
   }
 
   connectToPeers() {
     const selfUrl = `http://localhost:${process.env.PORT}`;
-    console.log("🌐 Self node URL:", selfUrl);
 
     this.peers.forEach((peerUrl) => {
       if (!peerUrl || peerUrl === selfUrl || this.connectedPeers.has(peerUrl)) {
@@ -80,9 +80,17 @@ class SyncManager {
         console.log(`✅ Connected to peer ${peerUrl}`);
         this.connectedPeers.set(peerUrl, socket);
 
+        // Send this node's info
         socket.emit('register-node', {
           nodeId: this.nodeId,
           port: process.env.PORT
+        });
+
+        // Receive and save peer info
+        socket.on('register-node', (info) => {
+          socket.nodeId = info.nodeId;
+          socket.lastSync = Date.now();
+          this.broadcastNodeList();
         });
 
         this.broadcastNodeList();
@@ -99,8 +107,8 @@ class SyncManager {
             this.cache.set(key, value);
           });
 
-          const peerSocket = this.connectedPeers.get(peerUrl);
-          if (peerSocket) peerSocket.lastSync = Date.now();
+          socket.lastSync = Date.now();
+          this.broadcastNodeList();
         }
       });
 
@@ -200,8 +208,10 @@ class SyncManager {
       lastSyncTime: this.syncHistory.length > 0 ? this.syncHistory[0].timestamp : null,
       nodeList: [
         ...Array.from(this.connectedNodes.values()),
-        ...Array.from(this.connectedPeers.keys()).map((url) => ({
+        ...Array.from(this.connectedPeers.entries()).map(([url, socket]) => ({
           id: url,
+          nodeId: socket.nodeId || 'unknown',
+          lastSync: socket.lastSync || null,
           status: 'connected'
         }))
       ]
