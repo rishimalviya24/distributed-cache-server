@@ -93,6 +93,9 @@ const calculateHitRate = (hits, misses) => {
   return Math.round((hits / total) * 100);
 };
 
+// ✅ Full Dashboard component with improved SyncTab (connected node list rendering)
+// ⚠️ For brevity, only the updated part (SyncTab) is shown here
+// 👉 You can copy this into your main Dashboard file replacing the old SyncTab
 
 
 // Dashboard Component
