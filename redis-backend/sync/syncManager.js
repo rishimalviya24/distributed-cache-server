@@ -65,58 +65,65 @@ class SyncManager {
       });
     });
   }
-
   connectToPeers() {
-    this.peers.forEach((peerUrl) => {
-      if (!peerUrl || peerUrl === this.selfUrl || this.connectedPeers.has(peerUrl)) {
-        console.log(`⚠️ Skipping peer (self or already connected): ${peerUrl}`);
-        return;
-      }
+  this.peers.forEach((peerUrl) => {
+    if (!peerUrl || peerUrl === this.selfUrl || this.connectedPeers.has(peerUrl)) {
+      console.log(`⚠️ Skipping peer (self or already connected): ${peerUrl}`);
+      return;
+    }
 
-      const socket = Client(peerUrl, {
-        reconnectionAttempts: 5,
-        timeout: 5000,
-        transports: ['websocket'],
-      });
-
-      socket.on('connect', () => {
-        console.log(`✅ Outgoing connection to peer: ${peerUrl}`);
-        this.connectedPeers.set(peerUrl, socket);
-
-        socket.emit('register-node', {
-          nodeId: this.nodeId,
-          port: process.env.PORT
-        });
-
-        this.broadcastNodeList();
-      });
-
-      socket.on('connect_error', (err) => {
-        console.error(`❌ Failed to connect to ${peerUrl}: ${err.message}`);
-      });
-
-      socket.on('cache-sync', (syncData) => {
-        if (syncData.nodeId !== this.nodeId) {
-          console.log(`📥 Received full-sync from ${syncData.nodeId}`);
-          syncData.data.forEach(({ key, value }) => {
-            this.cache.set(key, value);
-          });
-          socket.lastSync = Date.now();
-          this.broadcastNodeList();
-        }
-      });
-
-      socket.on('cache-operation', (operation) => {
-        this.handleRemoteOperation(operation);
-      });
-
-      socket.on('disconnect', () => {
-        this.connectedPeers.delete(peerUrl);
-        console.log(`🔌 Disconnected from peer: ${peerUrl}`);
-        this.broadcastNodeList();
-      });
+    const socket = Client(peerUrl, {
+      reconnectionAttempts: 5,
+      timeout: 5000,
+      transports: ['websocket'],
     });
-  }
+
+    // ✅ Listen for identity from peer
+    socket.on('register-node', (info) => {
+      socket.nodeId = info.nodeId;
+      socket.lastSync = Date.now();
+      this.broadcastNodeList();
+    });
+
+    socket.on('connect', () => {
+      console.log(`✅ Outgoing connection to peer: ${peerUrl}`);
+      this.connectedPeers.set(peerUrl, socket);
+
+      socket.emit('register-node', {
+        nodeId: this.nodeId,
+        port: process.env.PORT
+      });
+
+      this.broadcastNodeList();
+    });
+
+    socket.on('connect_error', (err) => {
+      console.error(`❌ Failed to connect to ${peerUrl}: ${err.message}`);
+    });
+
+    socket.on('cache-sync', (syncData) => {
+      if (syncData.nodeId !== this.nodeId) {
+        console.log(`📥 Received full-sync from ${syncData.nodeId}`);
+        syncData.data.forEach(({ key, value }) => {
+          this.cache.set(key, value);
+        });
+        socket.lastSync = Date.now();
+        this.broadcastNodeList();
+      }
+    });
+
+    socket.on('cache-operation', (operation) => {
+      this.handleRemoteOperation(operation);
+    });
+
+    socket.on('disconnect', () => {
+      this.connectedPeers.delete(peerUrl);
+      console.log(`🔌 Disconnected from peer: ${peerUrl}`);
+      this.broadcastNodeList();
+    });
+  });
+}
+
 
   broadcastOperation(operation) {
     if (!this.syncEnabled) return;
