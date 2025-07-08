@@ -2,9 +2,6 @@
 const { v4: uuidv4 } = require('uuid');
 const { io: Client } = require('socket.io-client');
 
-/**
- * Handles synchronization between multiple cache nodes
- */
 class SyncManager {
   constructor(cacheInstance, io, peerNodes = []) {
     this.cache = cacheInstance;
@@ -12,19 +9,24 @@ class SyncManager {
     this.nodeId = uuidv4();
     this.syncEnabled = true;
     this.syncHistory = [];
-    this.connectedPeers = new Map(); // client connections (as a client)
-    this.connectedNodes = new Map(); // server connections (as a server)
+    this.connectedPeers = new Map(); // outgoing socket.io clients
+    this.connectedNodes = new Map(); // incoming socket.io clients
     this.peers = peerNodes;
 
-    console.log("🔗 [SyncManager] Attempting peer connections:", peerNodes);
+    this.selfUrl = process.env.SELF_URL || `http://localhost:${process.env.PORT}`;
+    console.log("🔗 [SyncManager] Starting with Node ID:", this.nodeId);
+    console.log("🔗 [SyncManager] Self URL:", this.selfUrl);
+    console.log("🔗 [SyncManager] Attempting to connect with peers:", peerNodes);
 
     this.setupSocketHandlers();
-    this.connectToPeers();
+
+    // Delay connect for Render cold starts
+    setTimeout(() => this.connectToPeers(), 4000);
   }
 
   setupSocketHandlers() {
     this.io.on('connection', (socket) => {
-      console.log(`🟢 Node connected (server): ${socket.id}`);
+      console.log(`🟢 Incoming node connected (as server): ${socket.id}`);
 
       socket.on('register-node', (nodeInfo) => {
         this.connectedNodes.set(socket.id, {
@@ -33,7 +35,6 @@ class SyncManager {
           lastSync: Date.now()
         });
 
-        // Reply with full sync
         socket.emit('cache-sync', {
           type: 'full-sync',
           data: this.cache.getAll(),
@@ -66,47 +67,40 @@ class SyncManager {
   }
 
   connectToPeers() {
-    const selfUrl = `http://localhost:${process.env.PORT}`;
-
     this.peers.forEach((peerUrl) => {
-      if (!peerUrl || peerUrl === selfUrl || this.connectedPeers.has(peerUrl)) {
+      if (!peerUrl || peerUrl === this.selfUrl || this.connectedPeers.has(peerUrl)) {
         console.log(`⚠️ Skipping peer (self or already connected): ${peerUrl}`);
         return;
       }
 
-      const socket = Client(peerUrl);
+      const socket = Client(peerUrl, {
+        reconnectionAttempts: 5,
+        timeout: 5000,
+        transports: ['websocket'],
+      });
 
       socket.on('connect', () => {
-        console.log(`✅ Connected to peer ${peerUrl}`);
+        console.log(`✅ Outgoing connection to peer: ${peerUrl}`);
         this.connectedPeers.set(peerUrl, socket);
 
-        // Send this node's info
         socket.emit('register-node', {
           nodeId: this.nodeId,
           port: process.env.PORT
-        });
-
-        // Receive and save peer info
-        socket.on('register-node', (info) => {
-          socket.nodeId = info.nodeId;
-          socket.lastSync = Date.now();
-          this.broadcastNodeList();
         });
 
         this.broadcastNodeList();
       });
 
       socket.on('connect_error', (err) => {
-        console.error(`❌ Failed to connect to ${peerUrl}:`, err.message);
+        console.error(`❌ Failed to connect to ${peerUrl}: ${err.message}`);
       });
 
       socket.on('cache-sync', (syncData) => {
         if (syncData.nodeId !== this.nodeId) {
-          console.log(`📥 Full-sync from ${syncData.nodeId}`);
+          console.log(`📥 Received full-sync from ${syncData.nodeId}`);
           syncData.data.forEach(({ key, value }) => {
             this.cache.set(key, value);
           });
-
           socket.lastSync = Date.now();
           this.broadcastNodeList();
         }
@@ -118,7 +112,7 @@ class SyncManager {
 
       socket.on('disconnect', () => {
         this.connectedPeers.delete(peerUrl);
-        console.log(`❌ Disconnected from peer ${peerUrl}`);
+        console.log(`🔌 Disconnected from peer: ${peerUrl}`);
         this.broadcastNodeList();
       });
     });
