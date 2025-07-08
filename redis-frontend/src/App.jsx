@@ -1,4 +1,3 @@
-// ✅ Updated version of your Dashboard component with working SyncTab node list display
 import React, { useState, useEffect } from "react";
 import {
   Server,
@@ -14,6 +13,7 @@ import {
 
 // API Service
 const API_BASE_URL = "https://redis-backend-comz.onrender.com/api";
+
 
 const apiService = {
   async getAllCache() {
@@ -82,21 +82,18 @@ const apiService = {
 
   async forceSync() {
     const response = await fetch(`${API_BASE_URL}/sync/force`, {
-      method: "POST" });
+      method: "POST",
+    });
     return await response.json();
   },
 };
 
+// Helper function to calculate hit rate
 const calculateHitRate = (hits, misses) => {
   const total = hits + misses;
   if (total === 0) return 0;
   return Math.round((hits / total) * 100);
 };
-
-// ✅ Full Dashboard component with improved SyncTab (connected node list rendering)
-// ⚠️ For brevity, only the updated part (SyncTab) is shown here
-// 👉 You can copy this into your main Dashboard file replacing the old SyncTab
-
 
 // Dashboard Component
 const Dashboard = () => {
