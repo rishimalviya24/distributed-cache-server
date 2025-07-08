@@ -15,7 +15,7 @@ class CacheServer {
     this.server = http.createServer(this.app);
     this.io = socketIo(this.server, {
       cors: {
-        origin:"https://redis-backend-comz.onrender.com",
+        origin: "https://redis-backend-comz.onrender.com",
         methods: ["GET", "POST", "DELETE", "PUT"]
       }
     });
@@ -54,9 +54,14 @@ class CacheServer {
   }
 
   setupRoutes() {
+    // ✅ Ping Route for UptimeRobot or health checks
+    this.app.get('/ping', (req, res) => {
+      res.status(200).send("pong - " + new Date().toISOString());
+    });
+
     this.app.get('/health', (req, res) => {
-      res.json({ 
-        status: 'healthy', 
+      res.json({
+        status: 'healthy',
         timestamp: new Date().toISOString(),
         nodeId: this.syncManager.nodeId
       });
