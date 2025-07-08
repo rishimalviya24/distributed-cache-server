@@ -5,7 +5,6 @@ const socketIo = require('socket.io');
 const compression = require('compression');
 const helmet = require('helmet');
 require('dotenv').config();
-require('dotenv-flow').config();
 
 const { LRUCache, LFUCache } = require('./cache/strategies');
 const SyncManager = require('./sync/syncManager');
