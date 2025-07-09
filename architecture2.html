@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distributed Cache System - Visual Diagrams</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .diagram-section {
+            margin-bottom: 50px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 5px solid #3498db;
+        }
+        
+        .diagram-title {
+            font-size: 1.8em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        
+        .diagram {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            overflow-x: auto;
+        }
+        
+        .sequence-diagram {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .step {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            border-left: 4px solid #28a745;
+        }
+        
+        .step-number {
+            font-weight: bold;
+            color: #28a745;
+        }
+        
+        .flowchart {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .flow-box {
+            padding: 15px 25px;
+            border: 2px solid #3498db;
+            border-radius: 10px;
+            background: #ecf0f1;
+            text-align: center;
+            font-weight: 600;
+            color: #2c3e50;
+            min-width: 200px;
+        }
+        
+        .flow-decision {
+            background: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+        
+        .flow-action {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        
+        .flow-arrow {
+            font-size: 24px;
+            color: #3498db;
+            font-weight: bold;
+        }
+        
+        .architecture-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .arch-component {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .arch-component h3 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            font-size: 1.2em;
+        }
+        
+        .arch-component ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .arch-component li {
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .connection-line {
+            height: 2px;
+            background: #3498db;
+            margin: 10px 0;
+        }
+        
+        .node-box {
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .sync-flow {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .sync-arrow {
+            font-size: 30px;
+            color: #e74c3c;
+            margin: 0 10px;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .metric-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #3498db;
+        }
+        
+        .metric-label {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Distributed Cache System</h1>
+            <p>Visual Architecture & Flow Diagrams</p>
+        </div>
+        
+        <div class="content">
+            <!-- Diagram 1: Overall System Architecture -->
+            <div class="diagram-section">
+                <h2 class="diagram-title">1. Overall System Architecture</h2>
+                <div class="architecture-grid">
+                    <div class="arch-component">
+                        <h3>🖥️ Cache Node A</h3>
+                        <ul>
+                            <li>Express Server</li>
+                            <li>Socket.io Server</li>
+                            <li>LRU/LFU Cache</li>
+                            <li>SyncManager</li>
+                            <li>Port: 5000</li>
+                        </ul>
+                    </div>
+                    <div class="arch-component">
+                        <h3>🖥️ Cache Node B</h3>
+                        <ul>
+                            <li>Express Server</li>
+                            <li>Socket.io Server</li>
+                            <li>LRU/LFU Cache</li>
+                            <li>SyncManager</li>
+                            <li>Port: 5001</li>
+                        </ul>
+                    </div>
+                    <div class="arch-component">
+                        <h3>🖥️ Cache Node C</h3>
+                        <ul>
+                            <li>Express Server</li>
+                            <li>Socket.io Server</li>
+                            <li>LRU/LFU Cache</li>
+                            <li>SyncManager</li>
+                            <li>Port: 5002</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="connection-line"></div>
+                <div class="arch-component">
+                    <h3>📊 Frontend Dashboard</h3>
+                    <ul>
+                        <li>Real-time Cache View</li>
+                        <li>Node Status Monitor</li>
+                        <li>Sync History</li>
+                        <li>Performance Metrics</li>
+                        <li>Strategy Switching</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Diagram 2: Peer-to-Peer Sync Flow -->
+            <div class="diagram-section">
+                <h2 class="diagram-title">2. Peer-to-Peer Synchronization Flow</h2>
+                <div class="sequence-diagram">
+                    <div class="step">
+                        <span class="step-number">Step 1:</span> Node A starts and reads PEER_NODES environment variable
+                    </div>
+                    <div class="step">
+                        <span class="step-number">Step 2:</span> Node A attempts WebSocket connection to Node B
+                    </div>
+                    <div class="step">
+                        <span class="step-number">Step 3:</span> On connection, Node A sends 'register-node' event with nodeId
+                    </div>
+                    <div class="step">
+                        <span class="step-number">Step 4:</span> Node B receives registration and sends 'cache-sync' with full cache data
+                    </div>
+                    <div class="step">
+                        <span class="step-number">Step 5:</span> Node A receives and applies all cache data locally
+                    </div>
+                    <div class="step">
+                        <span class="step-number">Step 6:</span> Both nodes broadcast 'node-list-update' to all connected clients
+                    </div>
+                    <div class="step">
+                        <span class="step-number">Step 7:</span> When Node A performs SET operation, it broadcasts 'cache-operation' to all peers
+                    </div>
+                    <div class="step">
+                        <span class="step-number">Step 8:</span> Node B receives operation and applies it to local cache
+                    </div>
+                    <div class="step">
+                        <span class="step-number">Step 9:</span> Both nodes update their sync history and broadcast metrics to frontends
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagram 3: Cache Operation Flow -->
+            <div class="diagram-section">
+                <h2 class="diagram-title">3. Cache Operation Flow</h2>
+                <div class="flowchart">
+                    <div class="flow-box">Client sends HTTP request<br/>POST /api/cache</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-box flow-decision">Validate request<br/>(key & value present?)</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-box flow-action">Store in local cache<br/>(LRU/LFU logic)</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-box flow-action">Broadcast to all peers<br/>via WebSocket</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-box flow-action">Update sync history</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-box flow-action">Broadcast to frontends<br/>(real-time update)</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-box">Return success response</div>
+                </div>
+            </div>
+
+            <!-- Diagram 4: Sync Communication Pattern -->
+            <div class="diagram-section">
+                <h2 class="diagram-title">4. Sync Communication Pattern</h2>
+                <div class="sync-flow">
+                    <div class="node-box">
+                        Node A<br/>
+                        <small>SET key=user:123</small>
+                    </div>
+                    <div class="sync-arrow">→</div>
+                    <div class="node-box">
+                        Node B<br/>
+                        <small>Receives operation</small>
+                    </div>
+                    <div class="sync-arrow">→</div>
+                    <div class="node-box">
+                        Node C<br/>
+                        <small>Receives operation</small>
+                    </div>
+                </div>
+                <div class="diagram">
+WebSocket Event Flow:
+┌─────────────────────────────────────────────────────────────────┐
+│                    cache-operation EVENT                        │
+├─────────────────────────────────────────────────────────────────┤
+│ {                                                               │
+│   type: 'set',                                                  │
+│   key: 'user:123',                                              │
+│   value: { name: 'John', age: 30 },                            │
+│   nodeId: 'node-a-uuid',                                        │
+│   timestamp: 1640995200000,                                     │
+│   operationId: 'op-uuid'                                        │
+│ }                                                               │
+└─────────────────────────────────────────────────────────────────┘
+                </div>
+            </div>
+
+            <!-- Diagram 5: LRU vs LFU Strategy -->
+            <div class="diagram-section">
+                <h2 class="diagram-title">5. LRU vs LFU Cache Strategy</h2>
+                <div class="architecture-grid">
+                    <div class="arch-component">
+                        <h3>🕐 LRU (Least Recently Used)</h3>
+                        <div class="diagram">
+Cache: [A, B, C, D] (capacity: 4)
+Access: E
+Result: [E, A, B, C] (D evicted)
+
+Access: A
+Result: [A, E, B, C] (A moved to front)
+
+Logic: Most recently used items stay,
+       least recently used are evicted
+                        </div>
+                    </div>
+                    <div class="arch-component">
+                        <h3>📊 LFU (Least Frequently Used)</h3>
+                        <div class="diagram">
+Cache: [A:5, B:3, C:7, D:2] (capacity: 4)
+Access: E
+Result: [A:5, B:3, C:7, E:1] (D evicted - lowest freq)
+
+Access: A
+Result: [A:6, B:3, C:7, E:1] (A frequency increased)
+
+Logic: Most frequently used items stay,
+       least frequently used are evicted
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagram 6: Strategy Switch Flow -->
+            <div class="diagram-section">
+                <h2 class="diagram-title">6. Strategy Switch Flow</h2>
+                <div class="flowchart">
+                    <div class="flow-box">Client sends POST /api/strategy<br/>{ strategy: "LFU" }</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-box flow-action">Backup current cache data<br/>const currentData = cache.getAll()</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-box flow-action">Create new cache instance<br/>new LFUCache(capacity)</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-box flow-action">Restore data to new cache<br/>currentData.forEach(item => cache.set(...))</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-box flow-action">Update SyncManager reference<br/>syncManager.cache = newCache</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-box flow-action">Broadcast strategy change<br/>to all peer nodes</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-box">Return success response</div>
+                </div>
+            </div>
+
+            <!-- Diagram 7: Metrics Collection Flow -->
+            <div class="diagram-section">
+                <h2 class="diagram-title">7. Metrics Collection & Broadcasting</h2>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value">Cache Metrics</div>
+                        <div class="metric-label">
+                            • Hit/Miss Ratio<br/>
+                            • Total Operations<br/>
+                            • Current Size<br/>
+                            • Capacity Usage
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">Sync Metrics</div>
+                        <div class="metric-label">
+                            • Connected Nodes<br/>
+                            • Sync Operations<br/>
+                            • Last Sync Time<br/>
+                            • Sync History
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">Server Metrics</div>
+                        <div class="metric-label">
+                            • Uptime<br/>
+                            • Memory Usage<br/>
+                            • CPU Usage<br/>
+                            • Request Count
+                        </div>
+                    </div>
+                </div>
+                <div class="flowchart">
+                    <div class="flow-box">Metrics triggered by:</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-box flow-action">• Cache operations (GET/SET/DELETE)<br/>• Sync events<br/>• Periodic intervals<br/>• Manual requests</div>
+                    <div class="flow-arrow">↓</div>
+                    <div class="flow-box flow-action">Broadcast via WebSocket<br/>to all connected frontends</div>
+                </div>
+            </div>
+
+            <!-- Diagram 8: Node Connection States -->
+            <div class="diagram-section">
+                <h2 class="diagram-title">8. Node Connection States & Management</h2>
+                <div class="diagram">
+NODE CONNECTION LIFECYCLE:
+┌─────────────────────────────────────────────────────────────────┐
+│                      DISCONNECTED                               │
+│                           │                                     │
+│                           ▼                                     │
+│      ┌─────────────────────────────────────────┐                │
+│      │           CONNECTING                    │                │
+│      │    • Attempting WebSocket connection    │                │
+│      │    • Retry attempts: 0/5               │                │
+│      └─────────────────────────────────────────┘                │
+│                           │                                     │
+│                           ▼                                     │
+│      ┌─────────────────────────────────────────┐                │
+│      │           CONNECTED                     │                │
+│      │    • WebSocket established              │                │
+│      │    • Sending register-node event       │                │
+│      └─────────────────────────────────────────┘                │
+│                           │                                     │
+│                           ▼                                     │
+│      ┌─────────────────────────────────────────┐                │
+│      │         REGISTERED                      │                │
+│      │    • Node info exchanged               │                │
+│      │    • Full cache sync received          │                │
+│      │    • Ready for operations              │                │
+│      └─────────────────────────────────────────┘                │
+│                           │                                     │
+│                           ▼                                     │
+│      ┌─────────────────────────────────────────┐                │
+│      │         SYNCHRONIZED                    │                │
+│      │    • Actively syncing operations       │                │
+│      │    • Broadcasting changes              │                │
+│      │    • Receiving peer updates            │                │
+│      └─────────────────────────────────────────┘                │
+└─────────────────────────────────────────────────────────────────┘
+                </div>
+            </div>
+
+            <!-- Diagram 9: Error Handling & Fault Tolerance -->
+            <div class="diagram-section">
+                <h2 class="diagram-title">9. Error Handling & Fault Tolerance</h2>
+                <div class="sequence-diagram">
+                    <div class="step">
+                        <span class="step-number">Scenario 1:</span> Node B suddenly disconnects
+                        <ul>
+                            <li>Node A detects disconnection via Socket.io event</li>
+                            <li>Node A removes Node B from connected peers list</li>
+                            <li>Node A broadcasts updated node list to frontends</li>
+                            <li>System continues operating with remaining nodes</li>
+                        </ul>
+                    </div>
+                    <div class="step">
+                        <span class="step-number">Scenario 2:</span> Node B reconnects after failure
+                        <ul>
+                            <li>Node A receives new connection from Node B</li>
+                            <li>Node A sends full cache sync to Node B</li>
+                            <li>Node B applies all received data</li>
+                            <li>Both nodes resume normal operation</li>
+                        </ul>
+                    </div>
+                    <div class="step">
+                        <span class="step-number">Scenario 3:</span> Network partition
+                        <ul>
+                            <li>Nodes continue operating independently</li>
+                            <li>When network heals, nodes reconnect</li>
+                            <li>Full sync ensures consistency</li>
+                            <li>Conflict resolution via timestamp</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagram 10: WebSocket Event Types -->
+            <div class="diagram-section">
+                <h2 class="diagram-title">10. WebSocket Event Types & Purposes</h2>
+                <div class="architecture-grid">
+                    <div class="arch-component">
+                        <h3>📡 Peer-to-Peer Events</h3>
+                        <ul>
+                            <li><strong>register-node:</strong> Initial node registration</li>
+                            <li><strong>cache-sync:</strong> Full cache synchronization</li>
+                            <li><strong>cache-operation:</strong> Individual operations</li>
+                            <li><strong>request-sync:</strong> Request full sync</li>
+                            <li><strong>disconnect:</strong> Node disconnection</li>
+                        </ul>
+                    </div>
+                    <div class="arch-component">
+                        <h3>🖥️ Frontend Events</h3>
+                        <ul>
+                            <li><strong>cache-state:</strong> Complete cache state</li>
+                            <li><strong>metrics-update:</strong> Performance metrics</li>
+                            <li><strong>node-list-update:</strong> Connected nodes</li>
+                            <li><strong>sync-status-change:</strong> Sync enable/disable</li>
+                            <li><strong>get-cache-state:</strong> Client state request</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diagram 11: Production Deployment -->
+            <div class="diagram-section">
+                <h2 class="diagram-title">11. Production Deployment Architecture</h2>
+                <div class="diagram">
+PRODUCTION SETUP:
+┌─────────────────────────────────────────────────────────────────┐
+│                        LOAD BALANCER                            │
+│                     (nginx/HAProxy)                             │
+└─────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      CACHE CLUSTER                              │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
+│  │ Cache Node 1│  │ Cache Node 2│  │ Cache Node 3│            │
+│  │ Port: 5001  │  │ Port: 5002  │  │ Port: 5003  │            │
+│  │ Region: US  │  │ Region: EU  │  │ Region: ASIA│            │
+│  └─────────────┘  └─────────────┘  └─────────────┘            │
+│         │                 │                 │                 │
+│         └─────────────────┼─────────────────┘                 │
+│                           │                                   │
+│                    WebSocket P2P                              │
+└─────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    MONITORING STACK                             │
+├─────────────────────────────────────────────────────────────────┤
+│  • Health checks (/ping, /health)                              │
+│  • Metrics collection (/api/metrics)                           │
+│  • Log aggregation                                             │
+│  • Alert system                                                │
+│  • Dashboard (Grafana/custom)                                  │
+└─────────────────────────────────────────────────────────────────┘
+
+Environment Variables:
+- PEER_NODES=node2:5002,node3:5003
+- CACHE_CAPACITY=10000
+- SELF_URL=https://cache-node1.example.com
+- FRONTEND_URL=https://dashboard.example.com
+                </div>
+            </div>
+
+            <!-- Summary -->
+            <div class="diagram-section">
+                <h2 class="diagram-title">🎯 Key Takeaways</h2>
+                <div class="architecture-grid">
+                    <div class="arch-component">
+                        <h3>🚀 Scalability</h3>
+                        <ul>
+                            <li>Horizontal scaling by adding nodes</li>
+                            <li>Load distribution across all nodes</li>
+                            <li>No single point of failure</li>
+                            <li>Configurable cache capacity</li>
+                        </ul>
+                    </div>
+                    <div class="arch-component">
+                        <h3>⚡ Performance</h3>
+                        <ul>
+                            <li>In-memory caching (LRU/LFU)</li>
+                            <li>Real-time synchronization</li>
+                            <li>Efficient WebSocket communication</li>
+                            <li>Bulk operations support</li>
+                        </ul>
+                    </div>
+                    <div class="arch-component">
+                        <h3>🔧 Reliability</h3>
+                        <ul>
+                            <li>Automatic reconnection</li>
+                            <li>Fault tolerance</li>
+                            <li>Comprehensive error handling</li>
+                            <li>Health monitoring</li>
+                        </ul>
+                    </div>
+                    <div class="arch-component">
+                        <h3>📊 Monitoring</h3>
+                        <ul>
+                            <li>Real-time metrics</li>
+                            <li>Sync history tracking</li>
+                            <li>Node status monitoring</li>
+                            <li>Performance analytics</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
