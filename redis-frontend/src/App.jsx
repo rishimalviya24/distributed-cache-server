@@ -11,6 +11,24 @@ import {
   Zap,
 } from "lucide-react";
 
+// ✅ Move useEffect here
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetch("https://redis-backend-comz.onrender.com/ping")
+        .then((res) => res.text())
+        .then((msg) => console.log("🔁 Ping Response:", msg))
+        .catch((err) => console.error("❌ Ping failed:", err.message));
+    }, 10000); // Every 10 sec
+
+    return () => clearInterval(interval); // Cleanup on unmount
+  }, []);
+
+  useEffect(() => {
+    loadData();
+    const interval = setInterval(loadData, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
 // API Service
 const API_BASE_URL = "https://redis-backend-comz.onrender.com/api";
 
@@ -87,19 +105,6 @@ const apiService = {
     return await response.json();
   },
 };
-
-//PONG
-useEffect(() => {
-  const interval = setInterval(() => {
-    fetch("https://redis-backend-comz.onrender.com/ping")
-      .then((res) => res.text())
-      .then((msg) => console.log("🔁 Ping Response:", msg))
-      .catch((err) => console.error("❌ Ping failed:", err.message));
-  }, 10000); // 10 sec me ek baar
-
-  return () => clearInterval(interval); // Cleanup
-}, []);
-
 
 // Helper function to calculate hit rate
 const calculateHitRate = (hits, misses) => {
