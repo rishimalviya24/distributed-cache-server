@@ -125,6 +125,8 @@ class SyncManager {
 }
 
 
+
+
   broadcastOperation(operation) {
     if (!this.syncEnabled) return;
 
@@ -249,5 +251,18 @@ class SyncManager {
     }, duration);
   }
 }
+
+// WebSocket server par
+ws.on('message', (msg) => {
+  try {
+    const data = JSON.parse(msg);
+    if (data.type === 'PING') {
+      ws.send(JSON.stringify({ type: 'PONG' }));
+    }
+  } catch (err) {
+    console.error('Invalid message:', msg);
+  }
+});
+
 
 module.exports = SyncManager;
