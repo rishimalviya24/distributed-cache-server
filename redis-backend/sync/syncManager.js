@@ -1,4 +1,3 @@
-// sync/syncManager.js
 const { v4: uuidv4 } = require('uuid');
 const { io: Client } = require('socket.io-client');
 
@@ -29,11 +28,16 @@ class SyncManager {
       console.log(`🟢 Incoming node connected (as server): ${socket.id}`);
 
       socket.on('register-node', (nodeInfo) => {
+        console.log(`📥 Received registration from node: ${nodeInfo.nodeId || 'unknown'}`);
+
         this.connectedNodes.set(socket.id, {
           ...nodeInfo,
           socketId: socket.id,
           lastSync: Date.now()
         });
+
+        // 🔥 FIX: Send our identity back to the connecting peer
+        socket.emit('register-node', { nodeId: this.nodeId });
 
         socket.emit('cache-sync', {
           type: 'full-sync',
@@ -65,65 +69,66 @@ class SyncManager {
       });
     });
   }
+
   connectToPeers() {
-  this.peers.forEach((peerUrl) => {
-    if (!peerUrl || peerUrl === this.selfUrl || this.connectedPeers.has(peerUrl)) {
-      console.log(`⚠️ Skipping peer (self or already connected): ${peerUrl}`);
-      return;
-    }
+    this.peers.forEach((peerUrl) => {
+      if (!peerUrl || peerUrl === this.selfUrl || this.connectedPeers.has(peerUrl)) {
+        console.log(`⚠️ Skipping peer (self or already connected): ${peerUrl}`);
+        return;
+      }
 
-    const socket = Client(peerUrl, {
-      reconnectionAttempts: 5,
-      timeout: 5000,
-      transports: ['websocket'],
-    });
-
-    // ✅ Listen for identity from peer
-    socket.on('register-node', (info) => {
-      socket.nodeId = info.nodeId;
-      socket.lastSync = Date.now();
-      this.broadcastNodeList();
-    });
-
-    socket.on('connect', () => {
-      console.log(`✅ Outgoing connection to peer: ${peerUrl}`);
-      this.connectedPeers.set(peerUrl, socket);
-
-      socket.emit('register-node', {
-        nodeId: this.nodeId,
-        port: process.env.PORT
+      const socket = Client(peerUrl, {
+        reconnectionAttempts: 5,
+        timeout: 5000,
+        transports: ['websocket'],
       });
 
-      this.broadcastNodeList();
-    });
-
-    socket.on('connect_error', (err) => {
-      console.error(`❌ Failed to connect to ${peerUrl}: ${err.message}`);
-    });
-
-    socket.on('cache-sync', (syncData) => {
-      if (syncData.nodeId !== this.nodeId) {
-        console.log(`📥 Received full-sync from ${syncData.nodeId}`);
-        syncData.data.forEach(({ key, value }) => {
-          this.cache.set(key, value);
-        });
+      // ✅ Peer sends back its identity here
+      socket.on('register-node', (info) => {
+        console.log(`📡 Peer ${peerUrl} registered as node: ${info.nodeId}`);
+        socket.nodeId = info.nodeId;
         socket.lastSync = Date.now();
         this.broadcastNodeList();
-      }
-    });
+      });
 
-    socket.on('cache-operation', (operation) => {
-      this.handleRemoteOperation(operation);
-    });
+      socket.on('connect', () => {
+        console.log(`✅ Outgoing connection to peer: ${peerUrl}`);
+        this.connectedPeers.set(peerUrl, socket);
 
-    socket.on('disconnect', () => {
-      this.connectedPeers.delete(peerUrl);
-      console.log(`🔌 Disconnected from peer: ${peerUrl}`);
-      this.broadcastNodeList();
-    });
-  });
-}
+        socket.emit('register-node', {
+          nodeId: this.nodeId,
+          port: process.env.PORT
+        });
 
+        this.broadcastNodeList();
+      });
+
+      socket.on('connect_error', (err) => {
+        console.error(`❌ Failed to connect to ${peerUrl}: ${err.message}`);
+      });
+
+      socket.on('cache-sync', (syncData) => {
+        if (syncData.nodeId !== this.nodeId) {
+          console.log(`📥 Received full-sync from ${syncData.nodeId}`);
+          syncData.data.forEach(({ key, value }) => {
+            this.cache.set(key, value);
+          });
+          socket.lastSync = Date.now();
+          this.broadcastNodeList();
+        }
+      });
+
+      socket.on('cache-operation', (operation) => {
+        this.handleRemoteOperation(operation);
+      });
+
+      socket.on('disconnect', () => {
+        this.connectedPeers.delete(peerUrl);
+        console.log(`🔌 Disconnected from peer: ${peerUrl}`);
+        this.broadcastNodeList();
+      });
+    });
+  }
 
   broadcastOperation(operation) {
     if (!this.syncEnabled) return;
@@ -158,6 +163,7 @@ class SyncManager {
           this.cache.clear();
           break;
         case 'strategy-change':
+          // No-op for now
           break;
       }
 
