@@ -88,6 +88,19 @@ const apiService = {
   },
 };
 
+//PONG
+useEffect(() => {
+  const interval = setInterval(() => {
+    fetch("https://redis-backend-comz.onrender.com/ping")
+      .then((res) => res.text())
+      .then((msg) => console.log("🔁 Ping Response:", msg))
+      .catch((err) => console.error("❌ Ping failed:", err.message));
+  }, 10000); // 10 sec me ek baar
+
+  return () => clearInterval(interval); // Cleanup
+}, []);
+
+
 // Helper function to calculate hit rate
 const calculateHitRate = (hits, misses) => {
   const total = hits + misses;
