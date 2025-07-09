@@ -358,4 +358,19 @@ if (require.main === module) {
   server.start();
 }
 
+function handleWebSocketConnection(ws) {
+  ws.on('message', (msg) => {
+    // ✅ yaha ws available hai
+    const data = JSON.parse(msg);
+    // handle message
+  });
+
+  ws.on('close', () => {
+    console.log('WebSocket disconnected');
+  });
+}
+
+module.exports = { handleWebSocketConnection };
+
+
 module.exports = CacheServer;

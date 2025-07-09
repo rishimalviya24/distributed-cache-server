@@ -252,17 +252,15 @@ class SyncManager {
   }
 }
 
-// WebSocket server par
-ws.on('message', (msg) => {
-  try {
-    const data = JSON.parse(msg);
-    if (data.type === 'PING') {
-      ws.send(JSON.stringify({ type: 'PONG' }));
-    }
-  } catch (err) {
-    console.error('Invalid message:', msg);
-  }
+const WebSocket = require('ws');
+const wss = new WebSocket.Server({ port: 8080 });
+const { handleWebSocketConnection } = require('./sync/syncManager');
+
+wss.on('connection', (ws) => {
+  handleWebSocketConnection(ws);
 });
+
+
 
 
 module.exports = SyncManager;
