@@ -55,9 +55,9 @@ class CacheServer {
 
   setupRoutes() {
     // ✅ Ping Route for UptimeRobot or health checks
-    this.app.get('/ping', (req, res) => {
-      res.status(200).send("pong - " + new Date().toISOString());
-    });
+    this.app.head('/ping', (req, res) => {
+  res.status(200).end(); // HEAD should not have body
+});
 
     this.app.get('/health', (req, res) => {
       res.json({
