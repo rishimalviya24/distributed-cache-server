@@ -111,52 +111,6 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-  let ws;
-
-  const connectWebSocket = () => {
-    ws = new WebSocket("wss://redis-backend-comz.onrender.com");
-
-    ws.onopen = () => {
-      console.log("✅ WebSocket connected");
-    };
-
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === "PING") {
-        console.log("📡 PING received from server");
-      }
-    };
-
-    ws.onclose = () => {
-      console.warn("🔌 WebSocket disconnected. Reconnecting in 3s...");
-      setTimeout(connectWebSocket, 3000); // Auto reconnect
-    };
-
-    ws.onerror = (err) => {
-      console.error("❌ WebSocket error:", err);
-      ws.close(); // Close on error and trigger reconnect
-    };
-
-    // 🔁 Send keep-alive ping every 25 seconds
-    const pingInterval = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "PING" }));
-      }
-    }, 25000);
-
-    // Cleanup
-    return () => {
-      clearInterval(pingInterval);
-      ws.close();
-    };
-  };
-
-  const cleanup = connectWebSocket();
-  return () => cleanup && cleanup();
-}, []);
-
-
   const loadData = async () => {
     try {
       const [cacheData, metricsData] = await Promise.all([
