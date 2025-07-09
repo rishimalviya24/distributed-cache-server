@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import socketService from "./socketService";
 import {
   Server,
   Database,
@@ -15,25 +14,6 @@ import {
 // API Service
 const API_BASE_URL = "https://redis-backend-comz.onrender.com/api";
 
-const [connectedNodesLive, setConnectedNodesLive] = useState(0);
-
-// ✅ WebSocket setup
-useEffect(() => {
-  const handleMessage = (data) => {
-    if (data.type === "connectedNodes") {
-      setConnectedNodesLive(data.count);
-    }
-  };
-
-  const handleOpen = () => console.log("📡 WS Connected");
-  const handleClose = () => setConnectedNodesLive(0);
-
-  socketService.createSocket(handleMessage, handleOpen, handleClose);
-
-  return () => {
-    socketService.closeSocket();
-  };
-}, []);
 
 const apiService = {
   async getAllCache() {
@@ -339,10 +319,9 @@ const Dashboard = () => {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {connectedNodesLive}
-                  </dd>
-
+                  <dt className="text-sm font-medium text-gray-500 truncate">
+                    Connected Nodes
+                  </dt>
                   <dd className="text-lg font-medium text-gray-900">
                     {metrics.sync?.connectedNodes || 0}
                   </dd>
@@ -578,20 +557,21 @@ const SyncTab = () => {
     }
   };
 
-  const handleForceSync = async () => {
-    try {
-      const result = await apiService.forceSync();
-      if (result.success) {
-        alert(result.message || "Force sync started"); // ✅ Show message
-        loadSyncData(); // ✅ Refresh sync status and history
-      } else {
-        alert("Force sync failed");
-      }
-    } catch (error) {
-      console.error("Error forcing sync:", error);
-      alert("Something went wrong while forcing sync");
+ const handleForceSync = async () => {
+  try {
+    const result = await apiService.forceSync();
+    if (result.success) {
+      alert(result.message || "Force sync started"); // ✅ Show message
+      loadSyncData(); // ✅ Refresh sync status and history
+    } else {
+      alert("Force sync failed");
     }
-  };
+  } catch (error) {
+    console.error("Error forcing sync:", error);
+    alert("Something went wrong while forcing sync");
+  }
+};
+
 
   if (loading) {
     return <div className="text-center py-8">Loading sync data...</div>;

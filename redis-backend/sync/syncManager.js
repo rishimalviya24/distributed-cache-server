@@ -125,8 +125,6 @@ class SyncManager {
 }
 
 
-
-
   broadcastOperation(operation) {
     if (!this.syncEnabled) return;
 
@@ -251,16 +249,5 @@ class SyncManager {
     }, duration);
   }
 }
-
-const WebSocket = require('ws');
-const wss = new WebSocket.Server({ port: 8080 });
-const { handleWebSocketConnection } = require('./sync/syncManager');
-
-wss.on('connection', (ws) => {
-  handleWebSocketConnection(ws);
-});
-
-
-
 
 module.exports = SyncManager;
