@@ -10,7 +10,8 @@
   "start:5001": "cross-env PORT=5001 node server.js",  
   "start:5002": "cross-env PORT=5002 node server.js",  
   "test": "jest",                                      
-  "test:watch": "jest --watch"                        
+  "test:watch": "jest --watch" ,
+  "type":"module"                       
 },
 
   "keywords": [

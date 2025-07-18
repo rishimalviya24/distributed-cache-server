@@ -9,8 +9,6 @@ import helmet from 'helmet';
 import SyncManager from './sync/syncManager.js';
 import { LRUCache, LFUCache } from './cache/strategies.js';
 
-import SyncManager from './sync/syncManager.js';
-
 
 class CacheServer {
   constructor() {
