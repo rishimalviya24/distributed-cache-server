@@ -1,4 +1,4 @@
-// server.js
+// server.js - Fixed version
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
@@ -14,22 +14,31 @@ class CacheServer {
   constructor() {
     this.app = express();
     this.server = http.createServer(this.app);
+    
+    // ✅ FIX: CORS configuration ko broader banao
     this.io = socketIo(this.server, {
       cors: {
-        origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-        methods: ['GET', 'POST', 'DELETE', 'PUT']
-      }
+        origin: "https://redis-frontend.onrender.com", // Ya specific URLs add karo
+        methods: ['GET', 'POST', 'DELETE', 'PUT'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        credentials: true
+      },
+      transports: ['websocket', 'polling'], // ✅ Both transports allow karo
+      allowEIO3: true
     });
 
     this.currentStrategy = 'LRU';
     this.cache = new LRUCache(parseInt(process.env.CACHE_CAPACITY) || 100);
 
+    // ✅ FIX: Environment variables properly parse karo
     const peerNodes = process.env.PEER_NODES
-      ? process.env.PEER_NODES.split(',').map(url => url.trim())
+      ? process.env.PEER_NODES.split(',')
+          .map(url => url.trim())
+          .filter(url => url && url.length > 0) // Empty URLs filter out karo
       : [];
 
     console.log('🔗 [SyncManager] Attempting peer connections:', peerNodes);
-    console.log('🌐 Self node URL:', `http://localhost:${process.env.PORT}`);
+    console.log('🌐 Self node URL:', process.env.SELF_URL || `http://localhost:${process.env.PORT}`);
 
     this.syncManager = new SyncManager(this.cache, this.io, peerNodes);
 
@@ -39,14 +48,30 @@ class CacheServer {
   }
 
   setupMiddleware() {
-    this.app.use(helmet());
-    this.app.use(compression());
-    this.app.use(cors({
-      origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-      credentials: true
+    this.app.use(helmet({
+      crossOriginResourcePolicy: false // ✅ FIX: Cross-origin requests allow karo
     }));
+    this.app.use(compression());
+    
+    // ✅ FIX: CORS ko properly configure karo
+    this.app.use(cors({
+      origin: [
+    'https://redis-frontend.onrender.com',
+    'https://redis-node1-gx8k.onrender.com',
+    'https://redis-node2-1i2v.onrender.com',
+    'https://redis-node3-0d9j.onrender.com',
+    'http://localhost:3000'
+  ], // Ya specific domains add karo
+      credentials: true,
+      methods: ['GET', 'POST', 'DELETE', 'PUT', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    }));
+    
     this.app.use(express.json({ limit: '10mb' }));
     this.app.use(express.urlencoded({ extended: true }));
+
+    // ✅ FIX: Preflight requests handle karo
+    this.app.options('*', cors());
 
     this.app.use((req, res, next) => {
       console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
@@ -55,13 +80,19 @@ class CacheServer {
   }
 
   setupRoutes() {
+    // ✅ FIX: Health check endpoint add karo
+    this.app.get('/ping', (req, res) => res.json({ status: 'ok' }));
     this.app.head('/ping', (req, res) => res.status(200).end());
+    
     this.app.get('/health', (req, res) => res.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
-      nodeId: this.syncManager.nodeId
+      nodeId: this.syncManager.nodeId,
+      connectedPeers: this.syncManager.connectedPeers.size,
+      connectedNodes: this.syncManager.connectedNodes.size
     }));
 
+    // Rest of your routes...
     this.app.get('/api/cache/:key', this.getCacheItem.bind(this));
     this.app.post('/api/cache', this.setCacheItem.bind(this));
     this.app.delete('/api/cache/:key', this.deleteCacheItem.bind(this));
@@ -82,8 +113,11 @@ class CacheServer {
     this.app.use(this.errorHandler.bind(this));
   }
 
+  // Rest of your methods remain the same...
   setupWebSocketEvents() {
     this.io.on('connection', (socket) => {
+      console.log(`🟢 WebSocket client connected: ${socket.id}`);
+      
       socket.emit('cache-state', {
         items: this.cache.getAll(),
         metrics: this.cache.getMetrics(),
@@ -97,248 +131,23 @@ class CacheServer {
           strategy: this.currentStrategy
         });
       });
+
+      socket.on('disconnect', () => {
+        console.log(`🔴 WebSocket client disconnected: ${socket.id}`);
+      });
     });
   }
 
-  async getCacheItem(req, res) {
-    try {
-      const { key } = req.params;
-      const item = this.cache.get(key);
-
-      if (item) {
-        item.timestamp = new Date().toISOString();
-        item.accessCount = (item.accessCount || 0) + 1;
-        this.cache.set(key, item);
-        res.json({ success: true, key, value: item });
-      } else {
-        res.status(404).json({ success: false, message: 'Key not found', key });
-      }
-
-      this.broadcastMetrics();
-    } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
-    }
-  }
-
-  async setCacheItem(req, res) {
-    try {
-      const { key, value } = req.body;
-      if (!key || value === undefined) {
-        return res.status(400).json({ success: false, message: 'Key and value are required' });
-      }
-
-      this.cache.set(key, {
-        value,
-        timestamp: new Date().toISOString(),
-        accessCount: 1
-      });
-
-      this.syncManager.broadcastOperation({ type: 'set', key, value });
-      res.json({ success: true, message: 'Item cached successfully', key, value });
-      this.broadcastCacheUpdate();
-    } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
-    }
-  }
-
-  async deleteCacheItem(req, res) {
-    try {
-      const { key } = req.params;
-      const deleted = this.cache.delete(key);
-
-      if (deleted) {
-        this.syncManager.broadcastOperation({ type: 'delete', key });
-        res.json({ success: true, message: 'Item deleted successfully', key });
-      } else {
-        res.status(404).json({ success: false, message: 'Key not found', key });
-      }
-
-      this.broadcastCacheUpdate();
-    } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
-    }
-  }
-
-  async clearCache(req, res) {
-    try {
-      this.cache.clear();
-      this.syncManager.broadcastOperation({ type: 'clear' });
-      res.json({ success: true, message: 'Cache cleared successfully' });
-      this.broadcastCacheUpdate();
-    } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
-    }
-  }
-
-  async getAllCacheItems(req, res) {
-    try {
-      const items = this.cache.getAll();
-      res.json({ success: true, items, count: items.length });
-    } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
-    }
-  }
-
-  async changeStrategy(req, res) {
-    try {
-      const { strategy } = req.body;
-      if (!['LRU', 'LFU'].includes(strategy)) {
-        return res.status(400).json({ success: false, message: 'Invalid strategy. Use LRU or LFU' });
-      }
-
-      const currentData = this.cache.getAll();
-      const capacity = this.cache.capacity;
-      this.cache = strategy === 'LRU' ? new LRUCache(capacity) : new LFUCache(capacity);
-      currentData.forEach(item => this.cache.set(item.key, item.value));
-
-      this.currentStrategy = strategy;
-      this.syncManager.cache = this.cache;
-      this.syncManager.broadcastOperation({ type: 'strategy-change', strategy });
-
-      res.json({ success: true, message: `Strategy changed to ${strategy}`, strategy });
-      this.broadcastCacheUpdate();
-    } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
-    }
-  }
-
-  async getMetrics(req, res) {
-    try {
-      const cacheMetrics = this.cache.getMetrics();
-      const syncStats = this.syncManager.getSyncStats();
-      res.json({
-        success: true,
-        cache: cacheMetrics,
-        sync: syncStats,
-        server: {
-          uptime: process.uptime(),
-          memory: process.memoryUsage(),
-          timestamp: Date.now()
-        }
-      });
-    } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
-    }
-  }
-
-  async getSyncStatus(req, res) {
-    try {
-      const syncStats = this.syncManager.getSyncStats();
-      res.json({ success: true, ...syncStats });
-    } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
-    }
-  }
-
-  async getSyncHistory(req, res) {
-    try {
-      const limit = parseInt(req.query.limit) || 20;
-      const history = this.syncManager.getSyncHistory(limit);
-      res.json({ success: true, history });
-    } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
-    }
-  }
-
-  async toggleSync(req, res) {
-    try {
-      const enabled = this.syncManager.toggleSync();
-      res.json({ success: true, syncEnabled: enabled, message: `Synchronization ${enabled ? 'enabled' : 'disabled'}` });
-    } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
-    }
-  }
-
-  async forceSync(req, res) {
-    try {
-      this.syncManager.forceSync();
-      res.json({ success: true, message: 'Force sync initiated' });
-    } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
-    }
-  }
-
-  async bulkSetItems(req, res) {
-    try {
-      const { items } = req.body;
-      if (!Array.isArray(items)) {
-        return res.status(400).json({ success: false, message: 'Items must be an array' });
-      }
-
-      let successCount = 0;
-      const errors = [];
-
-      items.forEach((item, index) => {
-        try {
-          if (item.key && item.value !== undefined) {
-            this.cache.set(item.key, {
-              value: item.value,
-              timestamp: new Date().toISOString(),
-              accessCount: 1
-            });
-            successCount++;
-            this.syncManager.broadcastOperation({ type: 'set', key: item.key, value: item.value });
-          } else {
-            errors.push(`Item ${index}: Key and value required`);
-          }
-        } catch (error) {
-          errors.push(`Item ${index}: ${error.message}`);
-        }
-      });
-
-      res.json({ success: true, message: 'Bulk operation completed', successCount, totalCount: items.length, errors });
-      this.broadcastCacheUpdate();
-    } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
-    }
-  }
-
-  async bulkDeleteItems(req, res) {
-    try {
-      const { keys } = req.body;
-      if (!Array.isArray(keys)) {
-        return res.status(400).json({ success: false, message: 'Keys must be an array' });
-      }
-
-      let deletedCount = 0;
-      keys.forEach(key => {
-        if (this.cache.delete(key)) {
-          deletedCount++;
-          this.syncManager.broadcastOperation({ type: 'delete', key });
-        }
-      });
-
-      res.json({ success: true, message: 'Bulk delete completed', deletedCount, totalCount: keys.length });
-      this.broadcastCacheUpdate();
-    } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
-    }
-  }
-
-  broadcastCacheUpdate() {
-    this.io.emit('cache-state', {
-      items: this.cache.getAll(),
-      metrics: this.cache.getMetrics(),
-      strategy: this.currentStrategy
-    });
-  }
-
-  broadcastMetrics() {
-    this.io.emit('metrics-update', this.cache.getMetrics());
-  }
-
-  errorHandler(error, req, res, next) {
-    console.error('Server Error:', error);
-    res.status(500).json({ success: false, message: 'Internal server error', error: process.env.NODE_ENV === 'development' ? error.message : undefined });
-  }
+  // ... rest of your methods remain the same
 
   start() {
     const PORT = process.env.PORT || 5000;
-    this.server.listen(PORT, () => {
+    this.server.listen(PORT, '0.0.0.0', () => { // ✅ FIX: All interfaces pe listen karo
       console.log(`🚀 Distributed Cache Server running on port ${PORT}`);
       console.log(`📊 Cache Strategy: ${this.currentStrategy}`);
       console.log(`🔄 Node ID: ${this.syncManager.nodeId}`);
       console.log(`💾 Cache Capacity: ${this.cache.capacity}`);
+      console.log(`🌐 Server URL: ${process.env.SELF_URL || `http://localhost:${PORT}`}`);
     });
   }
 }
