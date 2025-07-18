@@ -1,5 +1,5 @@
-const { v4: uuidv4 } = require("uuid");
-const { io: Client } = require("socket.io-client");
+import { v4 as uuidv4 } from "uuid";
+import { io as Client } from "socket.io-client";
 
 class SyncManager {
   constructor(cacheInstance, io, peerNodes = []) {
