@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 // API Service
-const API_BASE_URL = "https://redis-backend-comz.onrender.com/api";
+const API_BASE_URL = "https://redis-backend-b2v4.onrender.com/api";
 
 
 const apiService = {
