@@ -55,7 +55,7 @@ class CacheServer {
   }
 
   setupRoutes() {
-    this.app.head('/ping', (req, res) => res.status(200).end());
+  this.app.get('/ping', (req, res) => res.send('pong'));
     this.app.get('/health', (req, res) => res.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
