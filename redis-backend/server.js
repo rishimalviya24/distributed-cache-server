@@ -1,14 +1,16 @@
 // server.js
-const express = require('express');
-const cors = require('cors');
-const http = require('http');
-const socketIo = require('socket.io');
-const compression = require('compression');
-const helmet = require('helmet');
-require('dotenv').config();
+import express from 'express';
+import cors from 'cors';
+import http from 'http';
+const { Server: SocketIO } = require('socket.io');
 
-const { LRUCache, LFUCache } = require('./cache/strategies');
-const SyncManager = require('./sync/syncManager');
+import compression from 'compression';
+import helmet from 'helmet';
+import SyncManager from './sync/syncManager.js';
+import { LRUCache, LFUCache } from './cache/strategies.js';
+
+import SyncManager from './sync/syncManager.js';
+
 
 class CacheServer {
   constructor() {

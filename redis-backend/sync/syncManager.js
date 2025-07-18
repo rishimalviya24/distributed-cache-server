@@ -247,4 +247,4 @@ connectToPeers() {
 await this.syncManager.initialize();
 this.connectToPeers();
 
-module.exports = SyncManager;
+export default SyncManager;
