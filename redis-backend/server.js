@@ -55,13 +55,17 @@ class CacheServer {
   }
 
   setupRoutes() {
-  this.app.get('/ping', (req, res) => res.send('pong'));
-    this.app.get('/health', (req, res) => res.json({
+  this.app.head('/ping', (req, res) => res.status(200).end());
+
+  this.app.get('/health', (req, res) => {
+    res.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
       nodeId: this.syncManager.nodeId
-    }));
+    });
+  });
 
+  // Existing routes...
     this.app.get('/api/cache/:key', this.getCacheItem.bind(this));
     this.app.post('/api/cache', this.setCacheItem.bind(this));
     this.app.delete('/api/cache/:key', this.deleteCacheItem.bind(this));
