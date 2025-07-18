@@ -116,11 +116,15 @@ class CacheServer {
     this.io.on('connection', (socket) => {
       console.log(`🟢 WebSocket client connected: ${socket.id}`);
       
+      // Send initial state
       socket.emit('cache-state', {
         items: this.cache.getAll(),
         metrics: this.cache.getMetrics(),
         strategy: this.currentStrategy
       });
+
+      // Send sync status
+      socket.emit('sync-status', this.syncManager.getSyncStats());
 
       socket.on('get-cache-state', () => {
         socket.emit('cache-state', {
@@ -130,10 +134,25 @@ class CacheServer {
         });
       });
 
+      socket.on('get-sync-status', () => {
+        socket.emit('sync-status', this.syncManager.getSyncStats());
+      });
+
       socket.on('disconnect', () => {
         console.log(`🔴 WebSocket client disconnected: ${socket.id}`);
       });
     });
+
+    // Broadcast updates every 5 seconds
+    setInterval(() => {
+      this.io.emit('cache-state', {
+        items: this.cache.getAll(),
+        metrics: this.cache.getMetrics(),
+        strategy: this.currentStrategy
+      });
+      
+      this.io.emit('sync-status', this.syncManager.getSyncStats());
+    }, 5000);
   }
 
   // ✅ MISSING METHODS - Add these to fix the error
