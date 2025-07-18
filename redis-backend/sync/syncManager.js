@@ -1,5 +1,5 @@
-import { v4 as uuidv4 } from "uuid";
-import { io as Client } from "socket.io-client";
+const { v4: uuidv4 } = require("uuid");
+const { io: Client } = require("socket.io-client");
 
 class SyncManager {
   constructor(cacheInstance, io, peerNodes = []) {
@@ -76,46 +76,83 @@ class SyncManager {
     });
   }
 
-connectToPeers() {
-  this.peers.forEach((peerUrl) => {
-    if (!peerUrl || peerUrl === this.selfUrl || this.connectedPeers.has(peerUrl)) {
-      console.log(`⚠️ Skipping peer (self or already connected): ${peerUrl}`);
-      return;
-    }
-
-    const socket = Client(peerUrl, {
-      reconnectionAttempts: 5,
-      timeout: 5000,
-      transports: ['websocket']
-    });
-
-    socket.on('connect', () => {
-      console.log(`✅ Connected to peer: ${peerUrl}`);
-      this.connectedPeers.set(peerUrl, socket);
-      socket.emit('sync-initialize', { nodeId: this.syncManager.nodeId });
-    });
-
-    socket.on('connect_error', (err) => {
-      console.error(`❌ WebSocket error connecting to ${peerUrl}: ${err.message}`);
-    });
-
-    socket.on('disconnect', () => {
-      console.warn(`⚠️ Disconnected from peer: ${peerUrl}`);
-      this.connectedPeers.delete(peerUrl);
-    });
-  });
-
-  // 🔁 Wake up all peers every 30s to avoid Render sleep
-  setInterval(() => {
+  connectToPeers() {
     this.peers.forEach((peerUrl) => {
-      if (peerUrl !== this.selfUrl) {
-        axios.head(`${peerUrl}/ping`).catch(() => {
-          console.log(`⚠️ Failed ping to ${peerUrl}`);
-        });
+      // 🛑 Skip if peer URL is empty, self, or already connected
+      if (
+        !peerUrl ||
+        peerUrl === this.selfUrl ||
+        this.connectedPeers.has(peerUrl)
+      ) {
+        console.log(`⚠️ Skipping peer (self or already connected): ${peerUrl}`);
+        return;
       }
+
+      const socket = Client(peerUrl, {
+        reconnectionAttempts: 5,
+        timeout: 5000,
+        transports: ["websocket"],
+      });
+
+      // ✅ When connected to peer
+      socket.on("connect", () => {
+        console.log(`✅ Connected to peer: ${peerUrl}`);
+
+        // Save connection reference
+        this.connectedPeers.set(peerUrl, socket);
+        this.connections.push(socket);
+
+        // Register this node with the peer
+        socket.emit("register-node", {
+          nodeId: this.nodeId,
+          port: process.env.PORT,
+          selfUrl: this.selfUrl,
+        });
+
+        // Sync network state
+        this.broadcastNodeList();
+      });
+
+      // ✅ Peer responds with its node info
+      socket.on("register-node", (info) => {
+        console.log(`📡 Peer ${peerUrl} registered as node: ${info.nodeId}`);
+        socket.nodeId = info.nodeId;
+        socket.lastSync = Date.now();
+        this.broadcastNodeList();
+      });
+
+      // ✅ Peer sends full cache sync
+      socket.on("cache-sync", (syncData) => {
+        if (syncData.nodeId !== this.nodeId) {
+          console.log(`📥 Received sync from ${syncData.nodeId}`);
+          syncData.data.forEach(({ key, value }) => {
+            this.cache.set(key, value);
+          });
+          socket.lastSync = Date.now();
+          this.broadcastNodeList();
+        }
+      });
+
+      // ✅ Handle remote operations (SET, DELETE, etc.)
+      socket.on("cache-operation", (operation) => {
+        this.handleRemoteOperation(operation);
+      });
+
+      // ✅ Handle disconnection
+      socket.on("disconnect", () => {
+        console.log(`🔌 Disconnected from peer: ${peerUrl}`);
+        this.connectedPeers.delete(peerUrl);
+        this.connections = this.connections.filter((s) => s !== socket);
+        this.broadcastNodeList();
+      });
+
+      // ⚠️ Handle connection errors
+      socket.on("connect_error", (err) => {
+        console.error(`❌ Failed to connect to ${peerUrl}: ${err.message}`);
+      });
     });
-  }, 30000); // 30 seconds
-}
+  }
+
   broadcastOperation(operation) {
     if (!this.syncEnabled) return;
 
@@ -244,7 +281,4 @@ connectToPeers() {
   }
 }
 
-await this.syncManager.initialize();
-this.connectToPeers();
-
-export default SyncManager;
+module.exports = SyncManager;

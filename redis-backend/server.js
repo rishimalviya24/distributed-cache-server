@@ -1,14 +1,14 @@
 // server.js
-import express from 'express';
-import cors from 'cors';
-import http from 'http';
-const { Server: SocketIO } = require('socket.io');
+const express = require('express');
+const cors = require('cors');
+const http = require('http');
+const socketIo = require('socket.io');
+const compression = require('compression');
+const helmet = require('helmet');
+require('dotenv').config();
 
-import compression from 'compression';
-import helmet from 'helmet';
-import SyncManager from './sync/syncManager.js';
-import { LRUCache, LFUCache } from './cache/strategies.js';
-
+const { LRUCache, LFUCache } = require('./cache/strategies');
+const SyncManager = require('./sync/syncManager');
 
 class CacheServer {
   constructor() {
@@ -55,17 +55,13 @@ class CacheServer {
   }
 
   setupRoutes() {
-  this.app.head('/ping', (req, res) => res.status(200).end());
-
-  this.app.get('/health', (req, res) => {
-    res.json({
+    this.app.head('/ping', (req, res) => res.status(200).end());
+    this.app.get('/health', (req, res) => res.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
       nodeId: this.syncManager.nodeId
-    });
-  });
+    }));
 
-  // Existing routes...
     this.app.get('/api/cache/:key', this.getCacheItem.bind(this));
     this.app.post('/api/cache', this.setCacheItem.bind(this));
     this.app.delete('/api/cache/:key', this.deleteCacheItem.bind(this));
