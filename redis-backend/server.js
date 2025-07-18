@@ -1,3 +1,4 @@
+// server.js
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
@@ -15,8 +16,8 @@ class CacheServer {
     this.server = http.createServer(this.app);
     this.io = socketIo(this.server, {
       cors: {
-        origin: "https://redis-backend-comz.onrender.com",
-        methods: ["GET", "POST", "DELETE", "PUT"]
+        origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+        methods: ['GET', 'POST', 'DELETE', 'PUT']
       }
     });
 
@@ -27,8 +28,8 @@ class CacheServer {
       ? process.env.PEER_NODES.split(',').map(url => url.trim())
       : [];
 
-    console.log("🔗 [SyncManager] Attempting peer connections:", peerNodes);
-    console.log("🌐 Self node URL:", `http://localhost:${process.env.PORT}`);
+    console.log('🔗 [SyncManager] Attempting peer connections:', peerNodes);
+    console.log('🌐 Self node URL:', `http://localhost:${process.env.PORT}`);
 
     this.syncManager = new SyncManager(this.cache, this.io, peerNodes);
 
@@ -41,7 +42,7 @@ class CacheServer {
     this.app.use(helmet());
     this.app.use(compression());
     this.app.use(cors({
-      origin: process.env.FRONTEND_URL || "http://localhost:3000",
+      origin: process.env.FRONTEND_URL || 'http://localhost:3000',
       credentials: true
     }));
     this.app.use(express.json({ limit: '10mb' }));
@@ -54,18 +55,12 @@ class CacheServer {
   }
 
   setupRoutes() {
-    // ✅ Ping Route for UptimeRobot or health checks
-    this.app.head('/ping', (req, res) => {
-  res.status(200).end(); // HEAD should not have body
-});
-
-    this.app.get('/health', (req, res) => {
-      res.json({
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        nodeId: this.syncManager.nodeId
-      });
-    });
+    this.app.head('/ping', (req, res) => res.status(200).end());
+    this.app.get('/health', (req, res) => res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      nodeId: this.syncManager.nodeId
+    }));
 
     this.app.get('/api/cache/:key', this.getCacheItem.bind(this));
     this.app.post('/api/cache', this.setCacheItem.bind(this));
@@ -113,9 +108,7 @@ class CacheServer {
       if (item) {
         item.timestamp = new Date().toISOString();
         item.accessCount = (item.accessCount || 0) + 1;
-
         this.cache.set(key, item);
-
         res.json({ success: true, key, value: item });
       } else {
         res.status(404).json({ success: false, message: 'Key not found', key });
@@ -141,7 +134,6 @@ class CacheServer {
       });
 
       this.syncManager.broadcastOperation({ type: 'set', key, value });
-
       res.json({ success: true, message: 'Item cached successfully', key, value });
       this.broadcastCacheUpdate();
     } catch (error) {
@@ -201,7 +193,6 @@ class CacheServer {
 
       this.currentStrategy = strategy;
       this.syncManager.cache = this.cache;
-
       this.syncManager.broadcastOperation({ type: 'strategy-change', strategy });
 
       res.json({ success: true, message: `Strategy changed to ${strategy}`, strategy });
@@ -215,7 +206,6 @@ class CacheServer {
     try {
       const cacheMetrics = this.cache.getMetrics();
       const syncStats = this.syncManager.getSyncStats();
-
       res.json({
         success: true,
         cache: cacheMetrics,

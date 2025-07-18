@@ -8,9 +8,10 @@ class SyncManager {
     this.nodeId = uuidv4();
     this.syncEnabled = true;
     this.syncHistory = [];
-    this.connectedPeers = new Map(); // outgoing socket.io clients
-    this.connectedNodes = new Map(); // incoming socket.io clients
+    this.connectedPeers = new Map(); // Outgoing connections
+    this.connectedNodes = new Map(); // Incoming connections
     this.peers = peerNodes;
+    this.connections = []; // ✅ Add this to track peer sockets
 
     this.selfUrl = process.env.SELF_URL || `http://localhost:${process.env.PORT}`;
     console.log("🔗 [SyncManager] Starting with Node ID:", this.nodeId);
@@ -19,25 +20,26 @@ class SyncManager {
 
     this.setupSocketHandlers();
 
-    // Delay connect for Render cold starts
+    // Delay peer connection for Render cold start
     setTimeout(() => this.connectToPeers(), 4000);
   }
 
   setupSocketHandlers() {
     this.io.on('connection', (socket) => {
-      console.log(`🟢 Incoming node connected (as server): ${socket.id}`);
+      console.log(`🟢 Incoming node connected: ${socket.id}`);
 
       socket.on('register-node', (nodeInfo) => {
-        console.log(`📥 Received registration from node: ${nodeInfo.nodeId || 'unknown'}`);
-
+        console.log(`📥 Registered node: ${nodeInfo.nodeId}`);
         this.connectedNodes.set(socket.id, {
           ...nodeInfo,
           socketId: socket.id,
           lastSync: Date.now()
         });
 
-        // 🔥 FIX: Send our identity back to the connecting peer
-        socket.emit('register-node', { nodeId: this.nodeId });
+        socket.emit('register-node', {
+          nodeId: this.nodeId,
+          port: process.env.PORT
+        });
 
         socket.emit('cache-sync', {
           type: 'full-sync',
@@ -64,7 +66,7 @@ class SyncManager {
 
       socket.on('disconnect', () => {
         this.connectedNodes.delete(socket.id);
-        console.log(`🔴 Node disconnected (server): ${socket.id}`);
+        console.log(`🔴 Node disconnected (incoming): ${socket.id}`);
         this.broadcastNodeList();
       });
     });
@@ -83,17 +85,10 @@ class SyncManager {
         transports: ['websocket'],
       });
 
-      // ✅ Peer sends back its identity here
-      socket.on('register-node', (info) => {
-        console.log(`📡 Peer ${peerUrl} registered as node: ${info.nodeId}`);
-        socket.nodeId = info.nodeId;
-        socket.lastSync = Date.now();
-        this.broadcastNodeList();
-      });
-
       socket.on('connect', () => {
-        console.log(`✅ Outgoing connection to peer: ${peerUrl}`);
+        console.log(`✅ Connected to peer: ${peerUrl}`);
         this.connectedPeers.set(peerUrl, socket);
+        this.connections.push(socket); // ✅ Track outgoing connections
 
         socket.emit('register-node', {
           nodeId: this.nodeId,
@@ -103,13 +98,16 @@ class SyncManager {
         this.broadcastNodeList();
       });
 
-      socket.on('connect_error', (err) => {
-        console.error(`❌ Failed to connect to ${peerUrl}: ${err.message}`);
+      socket.on('register-node', (info) => {
+        console.log(`📡 Peer ${peerUrl} registered as node: ${info.nodeId}`);
+        socket.nodeId = info.nodeId;
+        socket.lastSync = Date.now();
+        this.broadcastNodeList();
       });
 
       socket.on('cache-sync', (syncData) => {
         if (syncData.nodeId !== this.nodeId) {
-          console.log(`📥 Received full-sync from ${syncData.nodeId}`);
+          console.log(`📥 Received sync from ${syncData.nodeId}`);
           syncData.data.forEach(({ key, value }) => {
             this.cache.set(key, value);
           });
@@ -126,6 +124,13 @@ class SyncManager {
         this.connectedPeers.delete(peerUrl);
         console.log(`🔌 Disconnected from peer: ${peerUrl}`);
         this.broadcastNodeList();
+
+        // ✅ Optionally remove from `connections` to keep clean
+        this.connections = this.connections.filter(s => s !== socket);
+      });
+
+      socket.on('connect_error', (err) => {
+        console.error(`❌ Failed to connect to ${peerUrl}: ${err.message}`);
       });
     });
   }
@@ -161,9 +166,6 @@ class SyncManager {
           break;
         case 'clear':
           this.cache.clear();
-          break;
-        case 'strategy-change':
-          // No-op for now
           break;
       }
 
