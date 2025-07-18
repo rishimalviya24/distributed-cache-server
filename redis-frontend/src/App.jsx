@@ -12,8 +12,7 @@ import {
 } from "lucide-react";
 
 // API Service
-const API_BASE_URL = "https://redis-backend-b2v4.onrender.com/api";
-
+const API_BASE_URL = `${import.meta.env.VITE_API_BASE}/api`;
 
 const apiService = {
   async getAllCache() {
